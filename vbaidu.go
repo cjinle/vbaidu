@@ -41,16 +41,19 @@ type Result struct {
 	Data    ResultData `json:"data"`
 }
 
+var videoChan chan Video
 var finishChan chan int
 
-func CrawlUrls(cat *CatType, videoChan chan Video) {
+
+func CrawlUrls(cat *CatType) {
 	maxPageNum := cat.MaxPageNum
 	page := 1
 	now := time.Now().Unix()
 	for page <= maxPageNum {
 		url := fmt.Sprintf(cat.PageUrl, page, now)
 		page++
-		fmt.Println(url)
+		// go getRemoteJson(url)
+		log.Println(url)
 		res, err := http.Get(url)
 		if err != nil {
 			log.Println(err)
@@ -72,10 +75,30 @@ func CrawlUrls(cat *CatType, videoChan chan Video) {
 	finishChan <- 1
 }
 
+func getRemoteJson(url string) {
+	log.Println(url)
+	res, err := http.Get(url)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	bytes, _ := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	v := &Result{}
+	err = json.Unmarshal(bytes, v)
+	if err != nil {
+		log.Println(err, string(bytes))
+		return
+	}
+	for _, video := range v.Data.Videos {
+		videoChan <- video
+	}
+}
+
 func StartCrawl() {
-	videoChan := make(chan Video)
-	finishChan := make(chan int)
-	go CrawlUrls(&VConf.Xiaopin, videoChan)
+	videoChan = make(chan Video)
+	finishChan = make(chan int)
+	CrawlUrls(&VConf.Xiaopin)
 
 	for {
 		select {
