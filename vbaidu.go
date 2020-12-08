@@ -5,10 +5,13 @@ import (
 	"fmt"
 	. "github.com/cjinle/vbaidu/conf"
 	"net/http"
+	"net/url"
 	"log"
 	"io/ioutil"
 	// "os"
+	"os/exec"
 	"time"
+	"regexp"
 )
 
 type Video struct {
@@ -29,10 +32,11 @@ type Video struct {
 	IsBaishi   string `json:"is_baishi"`
 	PlayLink   string `json:"play_link"`
 	PlayNum    string `json:"play_num"`
+	VideoUrl   string `json:"video_url`
 }
 
 type ResultData struct {
-	Videos []Video `json:videos`
+	Videos []*Video `json:videos`
 }
 
 type Result struct {
@@ -41,22 +45,22 @@ type Result struct {
 	Data    ResultData `json:"data"`
 }
 
-var videoChan chan Video
-var finishChan chan int
+
+// var videoChan chan *Video
 
 
-func CrawlUrls(cat *CatType) {
+func CrawlUrls(cat *CatType) ([]*Video) {
+	ret := []*Video{}
 	maxPageNum := cat.MaxPageNum
 	page := 1
 	now := time.Now().Unix()
 	for page <= maxPageNum {
 		url := fmt.Sprintf(cat.PageUrl, page, now)
 		page++
-		// go getRemoteJson(url)
 		log.Println(url)
 		res, err := http.Get(url)
 		if err != nil {
-			log.Println(err)
+			log.Println(err, url)
 			continue
 		}
 		bytes, _ := ioutil.ReadAll(res.Body)
@@ -64,48 +68,78 @@ func CrawlUrls(cat *CatType) {
 		v := &Result{}
 		err = json.Unmarshal(bytes, v)
 		if err != nil {
-			log.Println(err, string(bytes))
+			log.Println(err, string(bytes), page)
 			continue
 		}
-		for _, video := range v.Data.Videos {
-			videoChan <- video
-		}
+		ret = append(ret, v.Data.Videos...)
+
 	}
-	log.Println("finish")
-	finishChan <- 1
+	return ret
 }
 
-func getRemoteJson(url string) {
-	log.Println(url)
-	res, err := http.Get(url)
+
+func StartCrawl() {
+	log.SetFlags(log.Lshortfile | log.LstdFlags)
+	videoList := CrawlUrls(&VConf.Xiaopin)
+	// log.Println(videoList)
+	if len(videoList) == 0 {
+		return
+	}
+
+	// videoChan = make(chan *Video)
+	for _, video := range videoList {
+		log.Println(video.Url)
+		go ParseVideoUrl(video)
+		// ParseVideoUrl(video)
+	}
+	// for v := range videoChan {
+	// 	log.Println(v.VideoUrl)
+	// }
+	select {}
+}
+
+func ParseVideoUrl(video *Video) {
+	res, err := http.Get(video.Url)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	bytes, _ := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-	v := &Result{}
-	err = json.Unmarshal(bytes, v)
+	defer res.Body.Close()
+	bytes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Println(err, string(bytes))
+		log.Println(err)
 		return
 	}
-	for _, video := range v.Data.Videos {
-		videoChan <- video
+	reg := `videoFlashPlayUrl\s=\s\'(.*)\'`
+	submatch := regexp.MustCompile(reg).FindAllSubmatch(bytes, -1)
+	if len(submatch) > 0 && len(submatch[0]) > 0 {
+		vv := submatch[0][1]
+		urlInfo, err := url.Parse(string(vv))
+		if err != nil {
+			log.Println(err, string(vv))
+			return
+		}
+		log.Println(urlInfo.Query()["video"][0])
+		video.VideoUrl = urlInfo.Query()["video"][0]
+		go DownloadVideo(video)
+		// videoChan <- video
 	}
 }
 
-func StartCrawl() {
-	videoChan = make(chan Video)
-	finishChan = make(chan int)
-	CrawlUrls(&VConf.Xiaopin)
-
-	for {
-		select {
-		case v := <- videoChan:
-			log.Println(v)
-		case <- finishChan:
-			break
-		}
+func DownloadVideo(video *Video) {
+	if video.VideoUrl == "" {
+		return
+	}
+	// $cmd = sprintf("ffmpeg -i \"%s\" -c copy \"%s/%s.mp4\"", $param['video'], $dir, $val['title']);
+	// cmd := fmt.Sprintf("ffmpeg -i \"%s\" -c copy \"%s/%s.mp4\"", 
+	// 	video.VideoUrl, VConf.Main.DownloadDir, video.Title)
+	// log.Println(cmd)
+	cmd := exec.Command("ffmpeg", "-i", `"`+video.VideoUrl+`"`, 
+		"-c copy", fmt.Sprintf(`"%s/%s.mp4"`, VConf.Main.DownloadDir, video.Title))
+	log.Println(cmd.Path, cmd.Args)
+	err := cmd.Start()
+	if err != nil {
+		log.Println(err)
+		return
 	}
 }
