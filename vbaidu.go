@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	// "os"
 	"os/exec"
+	"sync"
 	"time"
 	"regexp"
 )
@@ -47,7 +48,7 @@ type Result struct {
 
 
 // var videoChan chan *Video
-
+var wg sync.WaitGroup
 
 func CrawlUrls(cat *CatType) ([]*Video) {
 	ret := []*Video{}
@@ -90,15 +91,18 @@ func StartCrawl() {
 	for _, video := range videoList {
 		log.Println(video.Url)
 		go ParseVideoUrl(video)
+		wg.Add(1)
 		// ParseVideoUrl(video)
 	}
 	// for v := range videoChan {
 	// 	log.Println(v.VideoUrl)
 	// }
-	select {}
+	wg.Wait()
+	log.Println("done")
 }
 
 func ParseVideoUrl(video *Video) {
+	defer wg.Done()
 	res, err := http.Get(video.Url)
 	if err != nil {
 		log.Println(err)
@@ -122,11 +126,13 @@ func ParseVideoUrl(video *Video) {
 		log.Println(urlInfo.Query()["video"][0])
 		video.VideoUrl = urlInfo.Query()["video"][0]
 		go DownloadVideo(video)
+		wg.Add(1)
 		// videoChan <- video
 	}
 }
 
 func DownloadVideo(video *Video) {
+	defer wg.Done()
 	if video.VideoUrl == "" {
 		return
 	}
@@ -142,4 +148,5 @@ func DownloadVideo(video *Video) {
 		log.Println(err)
 		return
 	}
+	
 }
