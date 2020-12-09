@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	. "github.com/cjinle/vbaidu/conf"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
-	"log"
-	"io/ioutil"
 	// "os"
 	"os/exec"
+	"regexp"
 	"sync"
 	"time"
-	"regexp"
 )
 
 type Video struct {
@@ -46,11 +46,10 @@ type Result struct {
 	Data    ResultData `json:"data"`
 }
 
-
 // var videoChan chan *Video
 var wg sync.WaitGroup
 
-func CrawlUrls(cat *CatType) ([]*Video) {
+func CrawlUrls(cat *CatType) []*Video {
 	ret := []*Video{}
 	maxPageNum := cat.MaxPageNum
 	page := 1
@@ -77,7 +76,6 @@ func CrawlUrls(cat *CatType) ([]*Video) {
 	}
 	return ret
 }
-
 
 func StartCrawl() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
@@ -137,10 +135,10 @@ func DownloadVideo(video *Video) {
 		return
 	}
 	// $cmd = sprintf("ffmpeg -i \"%s\" -c copy \"%s/%s.mp4\"", $param['video'], $dir, $val['title']);
-	// cmd := fmt.Sprintf("ffmpeg -i \"%s\" -c copy \"%s/%s.mp4\"", 
+	// cmd := fmt.Sprintf("ffmpeg -i \"%s\" -c copy \"%s/%s.mp4\"",
 	// 	video.VideoUrl, VConf.Main.DownloadDir, video.Title)
 	// log.Println(cmd)
-	cmd := exec.Command("ffmpeg", "-i", `"`+video.VideoUrl+`"`, 
+	cmd := exec.Command("ffmpeg", "-i", `"`+video.VideoUrl+`"`,
 		"-c copy", fmt.Sprintf(`"%s/%s.mp4"`, VConf.Main.DownloadDir, video.Title))
 	log.Println(cmd.Path, cmd.Args)
 	err := cmd.Start()
@@ -148,5 +146,5 @@ func DownloadVideo(video *Video) {
 		log.Println(err)
 		return
 	}
-	
+
 }

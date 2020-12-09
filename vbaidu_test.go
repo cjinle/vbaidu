@@ -3,9 +3,9 @@ package vbaidu
 import (
 	"encoding/json"
 	"fmt"
-	"testing"
 	"io/ioutil"
 	"os"
+	"testing"
 )
 
 func TestCrawlUrls(t *testing.T) {
