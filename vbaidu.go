@@ -3,11 +3,13 @@ package vbaidu
 import (
 	"encoding/json"
 	"fmt"
-	. "github.com/cjinle/vbaidu/conf"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+
+	. "github.com/cjinle/vbaidu/conf"
+
 	// "os"
 	"os/exec"
 	"regexp"

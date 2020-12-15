@@ -2,14 +2,14 @@ package vbaidu
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"testing"
 )
 
 func TestCrawlUrls(t *testing.T) {
-	fmt.Println("TestCrawlUrls start ... ")
+	log.Println("TestCrawlUrls start ... ")
 	StartCrawl()
 
 }
@@ -26,5 +26,5 @@ func TestResultData(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	// fmt.Println(v)
+	log.Println(v)
 }
