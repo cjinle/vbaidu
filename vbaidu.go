@@ -17,6 +17,7 @@ import (
 	"time"
 )
 
+// Video is item content
 type Video struct {
 	BlockSign  string `json:"block_sign"`
 	Wid        string `json:"wid"`
@@ -35,13 +36,15 @@ type Video struct {
 	IsBaishi   string `json:"is_baishi"`
 	PlayLink   string `json:"play_link"`
 	PlayNum    string `json:"play_num"`
-	VideoUrl   string `json:"video_url`
+	VideoUrl   string `json:"video_url"`
 }
 
+// ResultData is collection of video struct
 type ResultData struct {
-	Videos []*Video `json:videos`
+	Videos []*Video `json:"videos"`
 }
 
+// Result is remote server return data
 type Result struct {
 	ErrorNo int        `json:"errno"`
 	Msg     string     `json:"msg"`
@@ -51,6 +54,7 @@ type Result struct {
 // var videoChan chan *Video
 var wg sync.WaitGroup
 
+// CrawlUrls crawl curls task
 func CrawlUrls(cat *CatType) []*Video {
 	ret := []*Video{}
 	maxPageNum := cat.MaxPageNum
@@ -79,6 +83,7 @@ func CrawlUrls(cat *CatType) []*Video {
 	return ret
 }
 
+// StartCrawl start for crawl
 func StartCrawl() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 	videoList := CrawlUrls(&VConf.Xiaopin)
@@ -101,6 +106,7 @@ func StartCrawl() {
 	log.Println("done")
 }
 
+// ParseVideoUrl is get video urls
 func ParseVideoUrl(video *Video) {
 	defer wg.Done()
 	res, err := http.Get(video.Url)
@@ -131,6 +137,8 @@ func ParseVideoUrl(video *Video) {
 	}
 }
 
+// DownloadVideo is download remote video use ffmpeg
+// and copy to local
 func DownloadVideo(video *Video) {
 	defer wg.Done()
 	if video.VideoUrl == "" {
