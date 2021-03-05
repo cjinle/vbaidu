@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	. "github.com/cjinle/vbaidu/conf"
+	. "github.com/cjinle/test/vbaidu/conf"
 
 	// "os"
 	"os/exec"
